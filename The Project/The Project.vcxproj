@@ -140,6 +140,7 @@
     <ClInclude Include="Action.h" />
     <ClInclude Include="ArrayStack.h" />
     <ClInclude Include="CancelAction.h" />
+    <ClInclude Include="CancelPriQueue.h" />
     <ClInclude Include="CancelQueue.h" />
     <ClInclude Include="Chefs.h" />
     <ClInclude Include="GenericDefs.h" />

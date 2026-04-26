@@ -16,6 +16,7 @@ private:
 	int TR; // Ready time
 	int TS; // Service start time
 	int TF; // Finish time
+	int TCancel; // Cancellation time
 	int Size; //Number of Dishes
 	int Price; //The Price
 	ORD_TYPE Type; //The type of Order
@@ -60,6 +61,7 @@ public:
 	void SetTR(int time);
 	void SetTS(int time);
 	void SetTF(int time);
+	void SetTCancel(int time);
 	//For "OD"
 	void Set_Seats(int S);
 	void Set_Duration(int D);
@@ -76,6 +78,11 @@ public:
 	int Get_Tw() const;
 	//Sevice duration
 	int Get_Tserv() const;
+	//Cancellation time
+	int Get_TCancel() const;
+
+	int Get_TR() const;
+	int Get_Tf() const;
 
 	//For The cooking Orders
 	void SetAssignedChefID(int id);

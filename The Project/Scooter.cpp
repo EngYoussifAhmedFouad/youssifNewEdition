@@ -36,6 +36,16 @@ int Scooter::getTotalDist() const
 	return TotalDistance;
 }
 
+int Scooter::getReturnTime() const
+{
+	return ReturnTime;
+}
+
+int Scooter::getMainDuration() const
+{
+	return MainDuration;
+}
+
 string Scooter::getStatus() const
 {
 	switch (status) {
@@ -78,6 +88,11 @@ void Scooter::FinishDel()
 void Scooter::Return()
 {
 	status = AVAILABLE;
+}
+
+void Scooter::SetReturnTime(int time)
+{
+	ReturnTime = time;
 }
 
 void Scooter::SendToMain()

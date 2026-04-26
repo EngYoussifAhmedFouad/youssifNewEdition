@@ -9,7 +9,7 @@
 #include "TablePriQueue.h"
 #include "Table.h"
 #include "Scooter.h"
-
+#include"CancelPriQueue.h"
 
 class Restaurant
 {
@@ -63,7 +63,7 @@ private:
 
 
 	//Cooking Orders : 
-	CancelQueue<Order*> Cook_O;
+	CancelPriQueue<Order*> Cook_O;
 
 
 	//Insevise Orders :
@@ -74,12 +74,12 @@ public:
 
 	//To Add Orders
 	void AddOrder(Order* O);
-	void AddCookOrder(ORD_TYPE O_Type);
-	void CookingToReady();
-	void ReadyToService(ORD_TYPE O_Type);
-	void ServiceToFinish();
+	void AddCookOrder(ORD_TYPE O_Type,int CurrentTime);
+	void CookingToReady(int CurrentTime);
+	void ReadyToService(ORD_TYPE O_Type,int CurrentTime);
+	void ServiceToFinish(int CurrentTime);
 
-	void CancelOrder(int id);
+	void CancelOrder(int id,int Time);
 	void CancelReadyOVC(int id);
 	void CancelCookingOV(int id);
 
@@ -90,8 +90,8 @@ public:
 	void AddTable(int id, int capacity);
 
 	void AddScooter(int id, int s, int maind, int maxorders);
-	void HandleBackScooters();
-	void MaintenanceToFree();
+	void HandleBackScooters(int CurrentTime);
+	void MaintenanceToFree(int CurrentTime);
 
 	//To print the information
 	void Print_PendingOrders();

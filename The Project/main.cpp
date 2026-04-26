@@ -37,24 +37,24 @@ int main() {
 
         for (int i = 0; i < 30; i++) {
             ORD_TYPE randType = static_cast<ORD_TYPE>(rand() % 6);
-            myRestaurant->AddCookOrder(randType);
+            myRestaurant->AddCookOrder(randType,currentTime);
         }
 
         if ((rand() % 100) < 75) {
             for (int i = 0; i < 15; i++) {
-                myRestaurant->CookingToReady();
+                myRestaurant->CookingToReady(currentTime);
             }
         }
 
         for (int i = 0; i < 10; i++) {
             ORD_TYPE randType = static_cast<ORD_TYPE>(rand() % 6);
-            myRestaurant->ReadyToService(randType);
+            myRestaurant->ReadyToService(randType, currentTime);
         }
 
         for (int k = 0; k < 50; k++) {
             int cancelID = (rand() % 500) + 1;
             if ((rand() % 100) < 30) {
-                myRestaurant->CancelOrder(cancelID);
+                myRestaurant->CancelOrder(cancelID, currentTime);
             }
             if ((rand() % 100) < 30) {
                 myRestaurant->CancelReadyOVC(cancelID);
@@ -65,15 +65,15 @@ int main() {
         }
 
         if ((rand() % 100) < 25) {
-            myRestaurant->ServiceToFinish();
+            myRestaurant->ServiceToFinish(currentTime);
         }
 
         if ((rand() % 100) < 50) {
-            myRestaurant->HandleBackScooters();
+            myRestaurant->HandleBackScooters(currentTime);
         }
 
         if ((rand() % 100) < 50) {
-            myRestaurant->MaintenanceToFree();
+            myRestaurant->MaintenanceToFree(currentTime);
         }
 
         ui.PrintAll(myRestaurant);

@@ -15,6 +15,7 @@ private:
 	int OrdersCount;
 	int maxOrdersBeforeMain;
 	int TotalDistance;
+	int ReturnTime;
 	Status status;
 	Order* AssignedOrder;
 
@@ -27,6 +28,8 @@ public:
 	int getOrdersCount() const;
 	int getSpeed() const;
 	int getTotalDist() const;
+	int getReturnTime() const;//added for the return time of the scooter
+	int getMainDuration() const;
 	string getStatus() const;
 	Order* getAssignedOrder() const;
 
@@ -35,6 +38,7 @@ public:
 	void FinishDel();
 	void Return();
 
+	void SetReturnTime(int time);
 
 	void SendToMain();
 	bool NeedMain();

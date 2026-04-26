@@ -1,7 +1,8 @@
 #pragma once
-#include "LinkedQueue.h"
+#include "LinkedPriorityQueue.h" // Or the appropriate header file name for your Priority Queue
+
 template<typename T>
-class CancelQueue : public LinkedQueue<T>
+class CancelPriQueue : public LinkedPriorityQueue<T>
 {
 public:
     bool CancelOrder(int ID, T& returnedItem)
@@ -9,47 +10,37 @@ public:
         if (this->isEmpty())
             return false;
 
+        // Case 1: If the order to be cancelled is the first order in the queue
         if (this->frontPtr->getItem()->Get_ID() == ID)
         {
-            Node<T>* pdel = this->frontPtr;
-
+            PriNode<T>* pdel = this->frontPtr;
             returnedItem = pdel->getItem();
 
             this->frontPtr = this->frontPtr->getNext();
 
-            if (this->frontPtr == nullptr)
-                this->backPtr = nullptr;
-
             delete pdel;
-            this->count--;
+
+            this->count--; // Decrement the count of elements
             return true;
         }
 
-        Node<T>* ptr = this->frontPtr;
-        Node<T>* pdel = nullptr;
+        // Case 2: If the order is in the middle or at the end of the queue
+        PriNode<T>* ptr = this->frontPtr;
+        PriNode<T>* pdel = nullptr;
 
         while (ptr->getNext() != nullptr)
         {
             if (ptr->getNext()->getItem()->Get_ID() == ID)
             {
                 pdel = ptr->getNext();
-
                 returnedItem = pdel->getItem();
 
+                // Bypass the node to be deleted
                 ptr->setNext(pdel->getNext());
 
-                if (pdel == this->backPtr)
-                {
-                    this->backPtr = ptr;
-                }
-				// If we removed the last node, update backPtr
-                if (pdel == this->backPtr)
-                {
-                    this->backPtr = ptr;
-                }
-
                 delete pdel;
-                this->count--;
+
+                this->count--; // Decrement the count of elements
                 return true;
             }
 
@@ -58,6 +49,4 @@ public:
 
         return false;
     }
-
-
 };

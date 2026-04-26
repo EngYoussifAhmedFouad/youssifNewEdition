@@ -105,6 +105,11 @@ void Order::SetTF(int time)
 	TF = time;
 }
 
+void Order::SetTCancel(int time)
+{
+	TCancel = time;
+}
+
 void Order::Set_Seats(int S)
 {
 	Seats = S;
@@ -156,6 +161,21 @@ int Order::Get_Tserv() const //Tserv = TF - TS
 		Tserv = TF - TS;
 	}
 	return Tserv;
+}
+
+int Order::Get_TCancel() const
+{
+	return TCancel;
+}
+
+int Order::Get_TR() const
+{
+	return TR;
+}
+
+int Order::Get_Tf() const
+{
+	return TF;
 }
 
 

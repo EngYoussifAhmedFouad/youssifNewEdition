@@ -26,7 +26,10 @@ public:
                 {
                     prev->setNext(curr->getNext());
                 }
-
+				// If we removed the last node, update backPtr
+                if (curr->getNext() == nullptr) {
+                    this->backPtr = prev;
+                }
                 delete curr;
                 this->count--;
                 return true;

@@ -1,6 +1,6 @@
 #pragma once
-#include "Restaurant.h"
-//class Restaurant;
+//#include "Restaurant.h"
+class Restaurant;
 class Action
 {
 

@@ -1,4 +1,5 @@
 #include "Restaurant.h"
+#include<cmath>
 #include <iostream>
 using namespace std;
 
@@ -21,7 +22,7 @@ void Restaurant::AddOrder(Order* O) {
     }
 }
 
-void Restaurant::CancelOrder(int id)
+void Restaurant::CancelOrder(int id,int Time)
 {
     Order* pCancelledOrder = nullptr;
 
@@ -29,6 +30,7 @@ void Restaurant::CancelOrder(int id)
 
     if (isFound && pCancelledOrder != nullptr) {
 
+		pCancelledOrder->SetTCancel(Time);
         Cancelled_Orders.enqueue(pCancelledOrder);
         return;
     }
@@ -49,9 +51,11 @@ void Restaurant::CancelCookingOV(int id) {
     // Assuming Cook_O is derived to support CancelOrder(id)
     if (Cook_O.CancelOrder(id, pOrd)) {
         // Release the Chef link before cancelling
-        int chefID = pOrd->GetAssignedChefID();
-        // Logic to find Chef with chefID and set currentOrder to nullptr
-
+		if (pOrd->getAssignedChef()) 
+        {
+			pOrd->getAssignedChef()->Finish_Order(); // Release Chef
+			pOrd->setAssignedChef(nullptr); // Clear Chef assignment
+		}
         Cancelled_Orders.enqueue(pOrd);
     }
 }
@@ -72,23 +76,23 @@ void Restaurant::AddTable(int id, int capacity) {
 
     Table* Table_A = new Table(id, capacity);
 
-    Free_Tables.enqueue(Table_A, capacity);
+    Free_Tables.enqueue(Table_A, -capacity);
 }
 
 void Restaurant::AddScooter(int id, int speed, int maindur, int maxorders)
 {
     Scooter* Scooter_A = new Scooter(id, speed, maindur, maxorders);
     if (Scooter_A->getStatus() == "Available")
-        Free_Scot.enqueue(Scooter_A, Scooter_A->getTotalDist());
+        Free_Scot.enqueue(Scooter_A, -(Scooter_A->getTotalDist()));
     else if (Scooter_A->getStatus() == "Back")
-        Back_Scot.enqueue(Scooter_A, Scooter_A->getTotalDist());
+        Back_Scot.enqueue(Scooter_A, -(Scooter_A->getTotalDist()));
     else if (Scooter_A->NeedMain())
         Maint_Scot.enqueue(Scooter_A);
 
 }
 
 // 3.1: Assign to Chefs
-void Restaurant::AddCookOrder(ORD_TYPE O_Type) {
+void Restaurant::AddCookOrder(ORD_TYPE O_Type,int CurrentTime) {
     Order* O = nullptr;
     // Dequeue from Pending
     switch (O_Type) {
@@ -112,7 +116,11 @@ void Restaurant::AddCookOrder(ORD_TYPE O_Type) {
             Chef_S.dequeue(Ch);
             if (Ch->Is_Avalable() && !assigned) {
                 Ch->Assign_Order(O); O->setAssignedChef(Ch); O->SetAssignedChefID(Ch->Get_ID());
-                Cook_O.enqueue(O); assigned = true;
+				O->SetTA(CurrentTime);
+				O->SetTR(CurrentTime + ceil((float)O->Get_Size() / Ch->Get_Speed()));
+                
+                Cook_O.enqueue(O,-(O->Get_TR())); 
+                assigned = true;
             }
             Chef_S.enqueue(Ch);
         }
@@ -123,7 +131,11 @@ void Restaurant::AddCookOrder(ORD_TYPE O_Type) {
             Chef_N.dequeue(Ch);
             if (Ch->Is_Avalable() && !assigned) {
                 Ch->Assign_Order(O); O->setAssignedChef(Ch); O->SetAssignedChefID(Ch->Get_ID());
-                Cook_O.enqueue(O); assigned = true;
+
+                O->SetTA(CurrentTime);
+				O->SetTR(CurrentTime + ceil((float)O->Get_Size() / Ch->Get_Speed()));
+
+                Cook_O.enqueue(O,-(O->Get_TR())); assigned = true;
             }
             Chef_N.enqueue(Ch);
         }
@@ -133,30 +145,44 @@ void Restaurant::AddCookOrder(ORD_TYPE O_Type) {
                 Chef_S.dequeue(Ch);
                 if (Ch->Is_Avalable() && !assigned) {
                     Ch->Assign_Order(O); O->setAssignedChef(Ch); O->SetAssignedChefID(Ch->Get_ID());
-                    Cook_O.enqueue(O); assigned = true;
+                    
+                    O->SetTA(CurrentTime);
+                    O->SetTR(CurrentTime + ceil((float)O->Get_Size() / Ch->Get_Speed()));
+                 
+                    Cook_O.enqueue(O,-(O->Get_TR())); assigned = true;
                 }
                 Chef_S.enqueue(Ch);
             }
         }
     }
-
     if (!assigned) { TotalOrders--; AddOrder(O); } // Put back if no chef
 }
 
 // 3.2: Move to Ready
-void Restaurant::CookingToReady() {
+void Restaurant::CookingToReady(int CurrentTime) {
     Order* O = nullptr;
-    if (Cook_O.dequeue(O)) {
-        if (O->getAssignedChef()) O->getAssignedChef()->Finish_Order(); // Release Chef
-        ORD_TYPE type = O->Get_Type();
-        if (type == ODN || type == ODG) Ready_OD.enqueue(O);
-        else if (type == OT) Ready_OT.enqueue(O);
-        else Ready_OV.enqueue(O);
+    CancelQueue<Order*> Temp_Cook;
+    while (Cook_O.peek(O))
+    {
+		
+        if (O->Get_TR() == CurrentTime)
+        {
+			Cook_O.dequeue(O);
+            if (O->getAssignedChef()) O->getAssignedChef()->Finish_Order(); // Release Chef
+            ORD_TYPE type = O->Get_Type();
+            if (type == ODN || type == ODG) Ready_OD.enqueue(O);
+            else if (type == OT) Ready_OT.enqueue(O);
+            else Ready_OV.enqueue(O);
+        }
+        else
+        {
+            break;
+        }
     }
 }
 
 // 3.3: Ready to In-Service (Assign Scooters/Tables)
-void Restaurant::ReadyToService(ORD_TYPE O_Type) {
+void Restaurant::ReadyToService(ORD_TYPE O_Type,int CurrentTime) {
     Order* O = nullptr;
     switch (O_Type) {
     case ODG: case ODN: Ready_OD.dequeue(O); break;
@@ -165,22 +191,44 @@ void Restaurant::ReadyToService(ORD_TYPE O_Type) {
     }
 
     if (!O) return;
-
-    if (O_Type == OT) { Finished_O.push(O); return; } // OT goes straight to finished
+   
+    // OT goes straight to finished
+    if (O_Type == OT) 
+    {
+		O->SetTF(CurrentTime);
+        Finished_O.push(O);
+        return; 
+    } 
 
     bool assigned = false;
-    if (O_Type == ODG || O_Type == ODN) { // Dine-in needs Table
+    if (O_Type == ODG || O_Type == ODN) 
+    { // Dine-in needs Table
         Table* T = nullptr;
         int count = Free_Tables.GetCount();
         for (int i = 0; i < count; i++) {
             Free_Tables.dequeue(T);
-            if (T->reservetable(O)) { O->setAssignedTable(T); Inserv_O.enqueue(O, 1); assigned = true; break; }
-            Free_Tables.enqueue(T, T->getCapacity());
+            if (T->reservetable(O)) { O->setAssignedTable(T);  assigned = true; break; }
+            Free_Tables.enqueue(T, -(T->getCapacity()));
+        }
+		if (assigned)
+        {
+            O->SetTF(CurrentTime + O->Get_Duration());
+            Inserv_O.enqueue(O, -(O->Get_Tf()));
         }
     }
     else { // Delivery needs Scooter
         Scooter* S = nullptr;
-        if (Free_Scot.dequeue(S)) { S->AssignScooter(O); O->setAssignedScooter(S); Inserv_O.enqueue(O, 1); assigned = true; }
+        if (Free_Scot.dequeue(S)) { 
+            S->AssignScooter(O); 
+            O->setAssignedScooter(S); 
+			// Calculate delivery time and set times
+            O->SetTS(CurrentTime);
+			int deliveryTime = ceil(O->Get_Distance() / S->getSpeed());
+			O->SetTF(CurrentTime + deliveryTime);
+
+            Inserv_O.enqueue(O, -(O->Get_Tf()));
+            assigned = true; 
+        }
     }
 
     if (!assigned) { // Return to ready if no resource
@@ -190,32 +238,61 @@ void Restaurant::ReadyToService(ORD_TYPE O_Type) {
 }
 
 // 3.7: Finish In-Service
-void Restaurant::ServiceToFinish() {
+void Restaurant::ServiceToFinish(int CurrentTime) 
+{
     Order* O = nullptr;
-    if (Inserv_O.dequeue(O)) {
-        Finished_O.push(O);
-        if (O->getAssignedScooter()) {
-            O->getAssignedScooter()->FinishDel();
-            Back_Scot.enqueue(O->getAssignedScooter(), O->getAssignedScooter()->getTotalDist());
+    while(!Inserv_O.isEmpty())
+    {
+        Inserv_O.peek(O);
+        if (O->Get_Tf() == CurrentTime) {
+            Inserv_O.dequeue(O);
+            Finished_O.push(O);
+            if (O->getAssignedScooter()) {
+                O->getAssignedScooter()->FinishDel();
+                Back_Scot.enqueue(O->getAssignedScooter(), -(O->getAssignedScooter()->getTotalDist()));
+            }
+            else if (O->getAssignedTable()) {
+				Table* T = O->getAssignedTable();
+				T->releasetable(O->Get_Seats()); // Add seats back
+
+                if(T->getFreeSeats()==T->getCapacity())
+                {
+                    Free_Tables.enqueue(T, -(T->getCapacity()));
+                }
+            }
         }
-        else if (O->getAssignedTable()) {
-            O->getAssignedTable()->releasetable(O->Get_Seats()); // Add seats back
-            Free_Tables.enqueue(O->getAssignedTable(), O->getAssignedTable()->getCapacity());
+        else
+        {
+            break;
         }
     }
 }
 
-void Restaurant::HandleBackScooters() {
+void Restaurant::HandleBackScooters(int CurrentTime) {
     Scooter* S = nullptr;
     while (Back_Scot.dequeue(S)) {
-        if (S->NeedMain()) { S->SendToMain(); Maint_Scot.enqueue(S); }
-        else { S->Return(); Free_Scot.enqueue(S, S->getTotalDist()); }
+        if (S->NeedMain()) { S->SendToMain(); S->SetReturnTime(CurrentTime+S->getMainDuration()); Maint_Scot.enqueue(S); }
+        else { S->Return(); Free_Scot.enqueue(S, -(S->getTotalDist())); }
     }
 }
 
-void Restaurant::MaintenanceToFree() {
+void Restaurant::MaintenanceToFree(int CurrentTime) {
     Scooter* S = nullptr;
-    if (Maint_Scot.dequeue(S)) { S->FinishMain(); Free_Scot.enqueue(S, S->getTotalDist()); }
+
+    while(Maint_Scot.peek(S))
+    {
+        if (S->getReturnTime() <= CurrentTime)
+        {
+			Maint_Scot.dequeue(S);
+            S->FinishMain();
+            Free_Scot.enqueue(S, -(S->getTotalDist()));
+
+        }
+        else
+        {
+			break; 
+        }
+    }
 }
 
 // --- PRINTING FUNCTIONS ---
@@ -232,7 +309,7 @@ void Restaurant::Print_CookingOrders()
 {
     cout << "----------Cooking Orders----------" << endl;
     cout << Cook_O.GetCount() << " Cooking Orders: ";
-    Node<Order*>* currNode = Cook_O.getFront();
+    PriNode<Order*>* currNode = Cook_O.getFront();
 
     bool first = true;
 
