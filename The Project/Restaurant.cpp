@@ -1,9 +1,14 @@
 #include "Restaurant.h"
+#include"RequestAction.h"
+#include"CancelAction.h"
 #include<cmath>
+#include <fstream>
 #include <iostream>
 using namespace std;
 
-Restaurant::Restaurant() : TotalOrders(0) {}
+Restaurant::Restaurant() : TotalOrders(0) {
+    pUI = new UI();
+}
 
 void Restaurant::AddOrder(Order* O) {
     TotalOrders++;
@@ -207,7 +212,7 @@ void Restaurant::ReadyToService(ORD_TYPE O_Type,int CurrentTime) {
         int count = Free_Tables.GetCount();
         for (int i = 0; i < count; i++) {
             Free_Tables.dequeue(T);
-            if (T->reservetable(O)) { O->setAssignedTable(T);  assigned = true; break; }
+            if (T->AssignTable(O)) { O->setAssignedTable(T);  assigned = true; break; }
             Free_Tables.enqueue(T, -(T->getCapacity()));
         }
 		if (assigned)
@@ -403,6 +408,302 @@ void Restaurant::PrintTables() const
     cout << endl;
 }
 
+bool Restaurant::Loadfile()
+{
+    string name = pUI->Getfilename();
+
+    ifstream inputFile(name);
+    
+    if (!inputFile.is_open()) return false; 
+
+
+    //Chefs
+    int Cn, Cs, speedN, speedS;
+    inputFile >> Cn >> Cs >> speedN >> speedS;
+    for (int i = 1; i <= Cn; i++) {
+        AddChef(i, CN, speedN);
+        
+    }
+    for (int i = 1; i <= Cs; i++) {
+        AddChef(i, CS, speedS);
+    }
+
+    //Scooters
+    int Scooter, SpeedSr, Main_Ords, Main_Dur;
+    inputFile >> Scooter >> SpeedSr >> Main_Ords >> Main_Dur;
+    for (int i = 1; i <= Scooter; i++) {
+        AddScooter(i, SpeedSr, Main_Dur, Main_Ords);
+    }
+
+    //Tables
+    int totalTables;
+    int CurrentId=1;//For Seting the Id's
+    inputFile >> totalTables;
+    while(totalTables!=0){
+        int Count, capacity;
+        inputFile >> Count >> capacity;
+        for (int j = 0; j < Count; j++) {
+            AddTable(CurrentId, capacity);
+            CurrentId++;
+        }
+        totalTables = totalTables - Count;
+
+    }
+
+    //Actions
+    int numActions;
+    inputFile >> numActions;
+    for (int i = 0; i < numActions; i++) {
+        char actionType;
+        inputFile >> actionType;
+
+        if (actionType == 'Q') { // Request Action
+            string type;
+            ORD_TYPE typeA;
+            int TQ, ID, Size, Price;
+            //For OD
+            int Seats, Duration;
+            bool CanShare;
+            //For Ov
+            float distance;
+            inputFile >> type;
+
+            if (type == "ODG") typeA = ODG;
+            else if (type == "ODN") typeA = ODN;
+            else if (type == "OT") typeA = OT;
+            else if (type == "OVC") typeA = OVC;
+            else if (type == "OVG") typeA = OVG;
+            else if (type == "OVN") typeA = OVN;
+            //else if (type == "X") typeA = X;
+
+            inputFile >> type >> TQ >> ID >> Size >> Price;
+            if (typeA == ODN || typeA == ODG) inputFile >> Seats >> Duration >> CanShare;
+            if (typeA == OVC || typeA == OVG || typeA == OVN) inputFile >> distance;
+            Action* pAct;
+            if (typeA == ODN || typeA == ODG) pAct = new RequestAction(ID, typeA, Size, Price, TQ, Seats, Duration, CanShare);
+            else if (typeA == OVC || typeA == OVG || typeA == OVN) pAct = new RequestAction(ID, typeA, Size, Price, TQ, distance);
+            else pAct = new RequestAction(ID, typeA, Size, Price, TQ);
+            
+            ActionsList.enqueue(pAct);
+
+
+
+        }
+        else if (actionType == 'X') { // Cancel Action
+            int Tcancel, ID;
+            inputFile >> Tcancel >> ID;
+            Action* pAct = new CancelAction(ID, Tcancel);
+            ActionsList.enqueue(pAct);
+        }
+    }
+
+    inputFile.close();
+    return true;
+
+}
+
+void Restaurant::Simulation()
+{
+    
+    string fileName = pUI->Getfilename();
+    if (!Loadfile()) return;//If the file Not open
+
+    int CurrentTimeStep = 1;
+    bool IsSimulation = true;
+
+
+}
+
+void Restaurant::ExecuteCurrentActions(int CT)
+{
+    Action* pAct;
+    while (ActionsList.peek(pAct)) {
+        if (pAct->GetActiontime() == CT) {
+            ActionsList.dequeue(pAct);
+            pAct->Act(this); 
+        }
+        else {
+            break; 
+        }
+    }
+
+}
+
+void Restaurant::CheckScooters(int CT)
+{
+    Scooter* pS;
+
+    while (Maint_Scot.peek(pS)) {
+        if (pS->getReturnTime() <= CT) {
+            Maint_Scot.dequeue(pS); 
+            pS->FinishMain(); 
+            Free_Scot.enqueue(pS, pS->getTotalDist());
+        }
+        else {
+            break; 
+        }
+    }
+
+    while (Back_Scot.peek(pS)) {
+        if (pS->getReturnTime() <= CT) {
+            Back_Scot.dequeue(pS); 
+
+            if (pS->NeedMain()) {
+                pS->SetReturnTime(CT + pS->getMainDuration());
+                Maint_Scot.enqueue(pS);
+            }
+            else {
+                Free_Scot.enqueue(pS, pS->getTotalDist());
+            }
+        }
+        else {
+            break;
+        }
+    }
+
+}
+
+void Restaurant::CheckInserve_OD(int CT)
+{
+    Order* pOrd;
+
+    while (Inserv_O.peek(pOrd)) {
+
+        if (pOrd->Get_Tf() <= CT) {
+            Inserv_O.dequeue(pOrd);
+
+            Table* pT = pOrd->getAssignedTable();
+            if (pT) {
+                pT->resettable(); 
+                Free_Tables.enqueue(pT, -1*(pT->getFreeSeats()));
+            }
+
+            
+            Finished_O.push(pOrd);
+
+        }
+        else {
+            break; 
+        }
+    }
+
+}
+
+void Restaurant::AssignOrders(int CT) {
+
+    AssignPendingToChefs(CT);
+
+    AssignReadyToResources(CT);
+}
+
+void Restaurant::AssignPendingToChefs(int CT)
+{
+
+    Order* pOrd = nullptr;
+    Chefs* pChef;
+
+    while (Pending_ODG.peek(pOrd) || Pending_OVG.peek(pOrd)) {
+        if (Chef_S.dequeue(pChef) && pChef->Is_Avalable() ) {
+            if (pOrd->Get_Type() == ODG) {
+                Pending_ODG.dequeue(pOrd);
+                pChef->Assign_Order(pOrd);
+                pOrd->setAssignedChef(pChef);
+            }
+            if (pOrd->Get_Type() == OVG) {
+                Pending_OVG.dequeue(pOrd);
+                pChef->Assign_Order(pOrd);
+                pOrd->setAssignedChef(pChef);
+            }
+            Cook_O.enqueue(pOrd, pOrd->Get_Tc());
+        }
+        else {
+            break;
+        }
+    }
+
+    while (Pending_ODN.peek(pOrd) || Pending_OT.peek(pOrd) || Pending_OVN.peek(pOrd) || Pending_OVC.peek(pOrd)){
+        if (Chef_N.dequeue(pChef) ) {
+            if (pOrd->Get_Type() == ODN) {
+                Pending_ODN.dequeue(pOrd);
+                
+            }else if (pOrd->Get_Type() == OT) {
+                Pending_OT.dequeue(pOrd);
+                
+            }
+            else if (pOrd->Get_Type() == OVN) {
+                Pending_OVN.dequeue(pOrd);
+            }
+            else if (pOrd->Get_Type() == OVC) {
+                Pending_OVC.dequeue(pOrd);
+            }
+            pOrd->SetTA(CT);
+            pChef->Assign_Order(pOrd);
+            pOrd->setAssignedChef(pChef);
+
+            Cook_O.enqueue(pOrd, pOrd->Get_Tc());
+        }
+        //if we not found free normal chefs
+        else if (Chef_S.dequeue(pChef)) {
+            if (pOrd->Get_Type() == ODN) {
+                Pending_ODN.dequeue(pOrd);
+
+            }
+            else if (pOrd->Get_Type() == OT) {
+                Pending_OT.dequeue(pOrd);
+
+            }
+            else if (pOrd->Get_Type() == OVN) {
+                Pending_OVN.dequeue(pOrd);
+            }
+            else if (pOrd->Get_Type() == OVC) {
+                Pending_OVC.dequeue(pOrd);
+            }
+            pOrd->SetTA(CT);
+            pChef->Assign_Order(pOrd);
+            pOrd->setAssignedChef(pChef);
+
+            Cook_O.enqueue(pOrd, pOrd->Get_Tc());
+        }else{
+            break;
+        }
+    }
+
+
+}
+
+void Restaurant::AssignReadyToResources(int CT)
+{
+    //For OD
+    AssignTablesTo_OD(CT);
+    //For OV
+    AssignScootersTo_OV(CT);
+    //For OT
+    FinalizeTakeawayOrders(CT);
+
+
+
+}
+
+void Restaurant::AssignTablesTo_OD(int CT)
+{
+    // Minimal implementation: attempt to assign ready dine-in orders to tables.
+    // For now, keep behavior simple to avoid changing existing logic — leave orders in Ready_OD if not handled elsewhere.
+    // This function can be expanded later with allocation logic.
+    (void)CT; // suppress unused parameter warning
+}
+
+void Restaurant::AssignScootersTo_OV(int CT)
+{
+    // Minimal implementation placeholder for assigning scooters to ready delivery orders.
+    (void)CT;
+}
+
+void Restaurant::FinalizeTakeawayOrders(int CT)
+{
+    // Minimal implementation for finalizing OT orders (move to finished if required).
+    (void)CT;
+}
+
 void Restaurant::Print_InServiceOrders() {
     cout << "----------- In-Service orders [order ID, scooter/Table ID] -----------" << endl;
     cout << Inserv_O.GetCount() << " Orders: ";
@@ -545,8 +846,7 @@ Restaurant::~Restaurant()
     Scooter* pScooter;
 
     //Delete the Actions
-    while (Request.dequeue(pAct)) { delete pAct; }
-    while (Cancellation.dequeue(pAct)) { delete pAct; }
+    while (ActionsList.dequeue(pAct)) { delete pAct; }
 
     //Delete the Chefs
     while (Chef_N.dequeue(pChef)) { delete pChef; }

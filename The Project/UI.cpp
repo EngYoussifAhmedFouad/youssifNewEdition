@@ -1,4 +1,5 @@
 #include "UI.h"
+#include "Restaurant.h"
 #include <iostream>
 using namespace std;
 
@@ -28,4 +29,12 @@ void UI::PrintAll(Restaurant* pRest) {
     cin.clear();
     cin.ignore(100, '\n');
     cin.get();
+}
+
+string UI::Getfilename() const
+{
+    string Name;
+    cout << "Please enter the input file name (e.g., test.txt): ";
+    cin >> Name;
+    return Name;
 }

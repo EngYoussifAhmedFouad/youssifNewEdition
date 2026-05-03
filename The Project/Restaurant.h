@@ -10,13 +10,16 @@
 #include "Table.h"
 #include "Scooter.h"
 #include"CancelPriQueue.h"
+#include"UI.h"
 
 class Restaurant
 {
 private:
+
+	UI* pUI;//Phase 2
+
 	//Action Lists: 
-	LinkedQueue<Action*>   Request;
-	LinkedQueue<Action*>  Cancellation;  //For Phase 2
+	LinkedQueue<Action*>   ActionsList;
 
 
 	//Pending Orders :
@@ -70,6 +73,19 @@ private:
 	LinkedPriorityQueue<Order*>  Inserv_O;
 
 	int TotalOrders;
+
+	//For The Simulation :
+	void ExecuteCurrentActions(int CT);
+	void CheckScooters(int CT);
+	void CheckInserve_OD(int CT);
+	void AssignOrders(int CT);
+	void AssignPendingToChefs(int CT);
+	void AssignReadyToResources(int CT);
+	//Helper functions
+	void AssignTablesTo_OD(int CT);
+	void AssignScootersTo_OV(int CT);
+	void FinalizeTakeawayOrders(int CT);
+
 public:
 
 	//To Add Orders
@@ -103,6 +119,15 @@ public:
 	void Print_AvailableScooters();
 	void PrintChefs();
 	void PrintTables() const;
+
+	//Load The Input File
+	bool Loadfile();
+
+	//The Simulation
+	void Simulation();
+	
+
+
 
 	template<typename T>
 	void PrintIDs(LinkedQueue<T*>& List);

@@ -33,17 +33,17 @@ bool Table::getisSharable() const
 	return isSharable;
 }
 
-TBL_STATUS Table::getStatus() const { 
-	return Status; 
+TBL_STATUS Table::getStatus() const {
+	return Status;
 }
 
-bool Table::reservetable(Order* pOrd)
+bool Table::AssignTable(Order* pOrd)
 {
 	// Check if the order exists and if the table has enough free seats
 	if (pOrd && canfit(pOrd->Get_Seats())) {
 
 		// 1. Link the order pointer
-		currOrder = pOrd;
+		currOrders.enqueue(pOrd);
 
 		// 2. Reduce the available seats
 		FreeSeats -= pOrd->Get_Seats();
@@ -70,7 +70,10 @@ void Table::releasetable(int seats)
 	if (FreeSeats == Capacity) {
 		Status = AVAILABLETABLE;
 		isSharable = true;
-		currOrder = nullptr;
+		Order* TempOrd;
+		while (!currOrders.isEmpty()) {
+			currOrders.dequeue(TempOrd);
+		}
 	}
 }
 
@@ -86,12 +89,12 @@ bool Table::canfit(int seats)
 
 bool Table::isFull()
 {
-	return FreeSeats==0;
+	return FreeSeats == 0;
 }
 
 bool Table::isEmpty()
 {
-	return FreeSeats==Capacity;
+	return FreeSeats == Capacity;
 }
 
 void Table::Print()
@@ -99,7 +102,7 @@ void Table::Print()
 	cout << "[T" << ID << "," << Capacity << "," << FreeSeats << "]";
 }
 
-ostream& operator<< (ostream& Out,const Table& T) {
+ostream& operator<< (ostream& Out, const Table& T) {
 	Out << "[T" << T.Get_ID() << "," << T.getCapacity() << "," << T.getFreeSeats() << "]";
 	return Out;
 }

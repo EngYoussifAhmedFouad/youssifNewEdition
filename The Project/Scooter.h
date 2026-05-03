@@ -8,7 +8,7 @@ class Order;
 class Scooter
 {
 private:
-
+		
 	int ID;
 	int Speed;
 	int MainDuration;

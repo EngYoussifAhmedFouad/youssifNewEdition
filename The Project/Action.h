@@ -14,6 +14,10 @@ public:
 	{
 	}
 
+	int GetActiontime()const {
+		return actionTime;
+	}
+
 	virtual void Act(Restaurant* pRest) = 0;
 };
 

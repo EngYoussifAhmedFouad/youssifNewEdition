@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include "GenericDefs.h"
+#include "LinkedQueue.h"
 // Forward declaration to avoid circular include
 class Order;
 using namespace std;
@@ -12,7 +13,7 @@ private:
 	int FreeSeats;
 	bool isSharable;
 	TBL_STATUS Status;
-	Order* currOrder;
+	LinkedQueue<Order*> currOrders;
 public:
 	Table(int id, int cap);
 
@@ -22,7 +23,7 @@ public:
 	bool getisSharable() const;
 	TBL_STATUS getStatus() const;
 
-	bool reservetable(Order* pOrd);
+	bool AssignTable(Order* pOrd);
 	void releasetable(int seats);
 	void resettable();
 
@@ -31,9 +32,8 @@ public:
 	bool isEmpty();
 
 	void Print();
-    friend ostream& operator<< (ostream& Out,const Table& T);
+	friend ostream& operator<< (ostream& Out, const Table& T);
 
 
 	Table() = default;
 };
-

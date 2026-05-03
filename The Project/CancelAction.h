@@ -1,5 +1,6 @@
 #pragma once
 #include "Action.h"
+#include"Restaurant.h"
 class CancelAction :public Action
 {
 private:

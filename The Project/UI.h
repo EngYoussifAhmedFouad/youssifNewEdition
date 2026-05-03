@@ -3,9 +3,12 @@
 #include "Table.h"
 #include "Chefs.h"
 #include "Scooter.h"
-#include "Restaurant.h"
 #include <iostream>
 using namespace std;
+
+// Forward declaration to avoid circular include
+class Restaurant;
+
 class UI
 {
 private:
@@ -16,6 +19,9 @@ public:
 	void PrintCurrentTime(int cur_Time) const;
 
 	void PrintAll(Restaurant* pRest);
+
+	//To take the lood file name as string
+	string Getfilename()const;
 
 	//void waitForClick();
 
