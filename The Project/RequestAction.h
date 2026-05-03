@@ -19,7 +19,7 @@ private:
 public:
     RequestAction(int id, ORD_TYPE typ, int sz, double mon, int time)
     {
-        
+
         OrderID = id;
         type = typ;
         size = sz;
@@ -27,7 +27,7 @@ public:
         actionTime = time;
         pOrd = new Order(OrderID, type, size, money, actionTime);
     }
-    RequestAction(int id, ORD_TYPE typ, int sz, double mon, int time, int seats, int duration, bool canShare):RequestAction(id, typ, sz, mon, time)
+    RequestAction(int id, ORD_TYPE typ, int sz, double mon, int time, int seats, int duration, bool canShare) :RequestAction(id, typ, sz, mon, time)
     {
         Duration = duration;
         CanShare = canShare;
@@ -37,7 +37,7 @@ public:
         pOrd->Set_Can_Share(CanShare);
 
     }
-    RequestAction(int id, ORD_TYPE typ, int sz, double mon, int time, int distance):RequestAction(id, typ, sz, mon, time)
+    RequestAction(int id, ORD_TYPE typ, int sz, double mon, int time, int distance) :RequestAction(id, typ, sz, mon, time)
     {
         Distance = distance;
         pOrd->Set_Distance(Distance);
